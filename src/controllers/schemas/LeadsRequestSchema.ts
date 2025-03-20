@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-export const CreateLeadRequestSchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  phone: z.string(),
-  status: z.enum([
+const LeadStatusSchema = z.enum([
     "New",
     "Contacted",
     "Qualified",
@@ -12,20 +8,27 @@ export const CreateLeadRequestSchema = z.object({
     "Unresponsive",
     "Disqualified",
     "Archived"
-  ]).optional()
+])
+
+export const GetLeadsRequestSchema = z.object({
+  page: z.string().optional(),
+  pageSize: z.string().optional(),
+  name: z.string().optional(),
+  status: LeadStatusSchema.optional(),
+  sortBy: z.enum(["name", "status", "createdAt"]).optional(),
+  order: z.enum(["asc", "desc"]).optional()
+})
+
+export const CreateLeadRequestSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  status: LeadStatusSchema.optional()
 })
 
 export const UpdateLeadRequestSchema = z.object({
   name: z.string().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),
-  status: z.enum([
-    "New",
-    "Contacted",
-    "Qualified",
-    "Converted",
-    "Unresponsive",
-    "Disqualified",
-    "Archived"
-  ]).optional()
+  status: LeadStatusSchema.optional()
 })
