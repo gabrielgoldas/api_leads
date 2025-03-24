@@ -12,7 +12,7 @@ export class PrismaLeadsRepository implements LeadsRepository {
           mode: params.where?.name?.mode
         },
         status: params.where?.status
-      },
+      },  
       orderBy: { [params.sortBy ?? "name"]: params.order },
       skip: params.offset,
       take: params.limit
