@@ -1,17 +1,7 @@
 import { Router } from "express";
-import { LeadsController } from "./controllers/LeadsController";
-import { GroupsController } from "./controllers/GroupsController";
-import { CampaignsController } from "./controllers/CampaignsController";
-import { CampaignLeadsController } from "./controllers/CampaignLeadsController";
-import { GroupLeadsController } from "./controllers/GroupLeadsController";
+import { campaignsController, campaignsLeadsController, groupsController, groupsLeadsController, leadsController } from "./container";
 
 const router = Router();
-
-const leadsController = new LeadsController()
-const groupsController = new GroupsController()
-const campaignsController = new CampaignsController()
-const campaignsLeadsController = new CampaignLeadsController()
-const groupsLeadsController = new GroupLeadsController()
 
 // Leads
 router.get("/leads", leadsController.index)
