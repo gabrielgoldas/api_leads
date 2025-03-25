@@ -10,6 +10,7 @@ export interface LeadWhereParams {
   }
   status?: LeadStatus
   groupId?: number
+  campaignId?: number
 }
 
 export interface FindLeadsParams {

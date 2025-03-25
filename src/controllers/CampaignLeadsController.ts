@@ -1,52 +1,42 @@
 import { Handler } from "express";
-import { Prisma } from "@prisma/client";
 import { AddLeadRequestSchema, GetCampaignLeadsRequestSchema, UpdateLeadStatusRequestSchema } from "./schemas/CampaignsRequestSchema";
-import { prisma } from "../database";
+import { CampaignsRepository } from "../repositories/CampaignsRepository";
+import { LeadsRepository, LeadWhereParams } from "../repositories/LeadsRepository";
 
 export class CampaignLeadsController {
+  constructor (
+    private readonly campaignsRepository: CampaignsRepository,
+    private readonly leadsRepository: LeadsRepository
+  ) { }
+
   getLeads: Handler = async (req, res, next) => {
     try {
       const campaignId = +req.params.campaignId
       const query = GetCampaignLeadsRequestSchema.parse(req.query)
       const { page = "1", pageSize = "10", name, status, sortBy = "name", order = "asc" } = query
 
-      const pageNumber = +page
-      const pageSizeNumber = +pageSize
+      const limit = +pageSize
+      const offset = (+page - 1) * limit
 
-      const where: Prisma.LeadWhereInput = {
-        campaigns: {
-          some: { campaignId }
-        }
-      }
+      const where: LeadWhereParams = { campaignId, campaignStatus: status }
 
-      if (name) where.name = { contains: name, mode: "insensitive" }
-      if (status) where.campaigns = { some: { status } }
+      if (name) where.name = { like: name, mode: "insensitive" }
 
-      const leads = await prisma.lead.findMany({
-        where,
-        orderBy: { [sortBy]: order },
-        skip: (pageNumber - 1) * pageSizeNumber,
-        take: pageSizeNumber,
-        include: {
-          campaigns: {
-            select: {
-              campaignId: true,
-              leadId: true,
-              status: true
-            }
-          }
+      const leads = await this.leadsRepository.find({
+        where, sortBy, order, limit, offset, include: {
+          campaigns: true
         }
       })
 
-      const total = await prisma.lead.count({ where })
+      const total = await this.leadsRepository.count(where)
 
       res.json({
         leads,
         meta: {
-          page: pageNumber,
-          pageSize: pageSizeNumber,
+          page: +page,
+          pageSize: limit,
           total,
-          totalPages: Math.ceil(total / pageSizeNumber)
+          totalPages: Math.ceil(total / limit)
         }
       })
 
@@ -57,14 +47,9 @@ export class CampaignLeadsController {
 
   addLead: Handler = async (req, res, next) => {
     try {
-      const body = AddLeadRequestSchema.parse(req.body)
-      await prisma.leadCampaign.create({
-        data: {
-          campaignId: +req.params.campaignId,
-          leadId: body.leadId,
-          status: body.status
-        }
-      })
+      const campaignId = +req.params.campaignId
+      const { leadId, status = "New"} = AddLeadRequestSchema.parse(req.body)
+      await this.campaignsRepository.addLead({ campaignId, leadId, status })
       res.status(201).end()
     } catch (error) {
       next(error)
@@ -73,17 +58,11 @@ export class CampaignLeadsController {
   
   updateLeadStatus: Handler = async (req, res, next) => {
     try {
-      const body = UpdateLeadStatusRequestSchema.parse(req.body)
-      const updatedLeadCampaign = await prisma.leadCampaign.update({
-        data: body,
-        where: {
-          leadId_campaignId: {
-            campaignId: +req.params.campaignId,
-            leadId: +req.params.leadId
-          }
-        }
-      })
-      res.json(updatedLeadCampaign)
+      const campaignId = +req.params.campaignId
+      const leadId = +req.params.leadId
+      const { status } = UpdateLeadStatusRequestSchema.parse(req.body)
+      await this.campaignsRepository.updateLeadStatus({ campaignId, leadId, status })
+      res.json({ message: "Lead status updated successfully" })
     } catch (error) {
       next(error)
     }
@@ -91,15 +70,10 @@ export class CampaignLeadsController {
 
   removeLead: Handler = async (req, res, next) => {
     try {
-      const removedLead = await prisma.leadCampaign.delete({
-        where: {
-          leadId_campaignId: {
-            campaignId: +req.params.campaignId,
-            leadId: +req.params.leadId
-          }
-        }
-      })
-      res.json({ removedLead })
+      const campaignId = +req.params.campaignId
+      const leadId = +req.params.leadId
+      await this.campaignsRepository.removeLead(campaignId, leadId)
+      res.json({ message: "Lead removed from campaign successfully!" })
     } catch (error) {
       next(error)
     }
